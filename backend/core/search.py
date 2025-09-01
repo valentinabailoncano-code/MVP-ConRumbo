@@ -1,91 +1,124 @@
+# backend/core/search.py
+from __future__ import annotations
 import os
-import json
-import yaml
-from typing import List, Dict, Optional, Tuple
-import faiss
+from pathlib import Path
+from typing import List, Dict, Optional, Tuple, Any
+
 import numpy as np
-from src.rag.embeddings import EmbeddingGenerator
-from src.models.protocol import Protocol, SearchResult
+import yaml
+
+# FAISS opcional (fallback a NumPy si no está disponible)
+try:
+    import faiss  # type: ignore
+    HAVE_FAISS = True
+except Exception:
+    faiss = None  # type: ignore
+    HAVE_FAISS = False
+
+from .embeddings import EmbeddingGenerator
+from .protocol import Protocol, SearchResult, load_all_protocols
+
 
 class RAGSearchEngine:
-    def __init__(self, protocols_dir: str = "src/protocols"):
-        self.protocols_dir = protocols_dir
+    def __init__(self, protocols_dir: Optional[str] = None):
+        # backend/core/search.py -> subir a backend/ y entrar a rag/protocols
+        self.protocols_dir = Path(protocols_dir) if protocols_dir else Path(__file__).resolve().parents[1] / "rag" / "protocols"
         self.embedding_generator = EmbeddingGenerator()
+
+        # Datos
         self.protocols: Dict[str, Protocol] = {}
-        self.index = None
-        self.protocol_ids = []
-        self.exact_match_intents = {}
-        
-        # Cargar protocolos y construir índice
+        self.protocol_ids: List[str] = []
+
+        # Índices
+        self.index = None                    # FAISS
+        self._embeddings: Optional[np.ndarray] = None  # Fallback NumPy (embeddings normalizados)
+
+        # Intents
+        self.exact_match_intents: Dict[str, List[str]] = {}
+
+        # Inicialización
         self._load_protocols()
         self._build_index()
         self._build_intent_mapping()
-    
-    def _load_protocols(self):
-        """Carga todos los protocolos desde archivos YAML."""
-        if not os.path.exists(self.protocols_dir):
-            print(f"Directorio de protocolos no encontrado: {self.protocols_dir}")
+
+    # -------------------------
+    # Carga de protocolos
+    # -------------------------
+    def _load_protocols(self) -> None:
+        """Carga todos los protocolos (Pydantic Protocol) desde YAML."""
+        if not self.protocols_dir.exists():
+            print(f"[RAG] Directorio de protocolos no encontrado: {self.protocols_dir}")
+            self.protocols = {}
             return
-        
-        for filename in os.listdir(self.protocols_dir):
-            if filename.endswith('.yaml') or filename.endswith('.yml'):
-                filepath = os.path.join(self.protocols_dir, filename)
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as file:
-                        protocol_data = yaml.safe_load(file)
-                        protocol = Protocol(**protocol_data)
-                        self.protocols[protocol.id] = protocol
-                        print(f"Protocolo cargado: {protocol.title}")
-                except Exception as e:
-                    print(f"Error cargando protocolo {filename}: {e}")
-    
-    def _build_index(self):
-        """Construye el índice FAISS con embeddings de los protocolos."""
+
+        self.protocols = load_all_protocols(self.protocols_dir)  # Dict[str, Protocol]
+        print(f"[RAG] Protocolos cargados: {len(self.protocols)}")
+
+    # -------------------------
+    # Construcción de índice
+    # -------------------------
+    def _text_from_protocol(self, p: Protocol) -> str:
+        """Concatena campos útiles del protocolo para embedding."""
+        parts: List[str] = [p.title or ""]
+
+        # steps: pueden tener .instruction y/o .voice_cue
+        for s in (p.steps or []):
+            instr = getattr(s, "instruction", None) or getattr(s, "action", None) or ""
+            if instr:
+                parts.append(instr)
+            vcue = getattr(s, "voice_cue", None) or ""
+            if vcue:
+                parts.append(vcue)
+
+        # triage
+        if p.triage:
+            parts.extend([t for t in (p.triage.red_flags or []) if t])
+            if p.triage.immediate_action:
+                parts.append(p.triage.immediate_action)
+
+        # voice_cues top-level
+        vcl = getattr(p, "voice_cues", None) or []
+        parts.extend([v for v in vcl if v])
+
+        return " ".join(parts)
+
+    def _build_index(self) -> None:
+        """Construye el índice de búsqueda (FAISS o fallback NumPy)."""
         if not self.protocols:
-            print("No hay protocolos cargados para indexar")
+            print("[RAG] No hay protocolos cargados para indexar")
             return
-        
-        # Preparar textos para embeddings
-        texts = []
-        protocol_ids = []
-        
-        for protocol_id, protocol in self.protocols.items():
-            # Combinar título, instrucciones y voice_cues para crear texto indexable
-            text_parts = [protocol.title]
-            
-            for step in protocol.steps:
-                text_parts.extend([step.instruction, step.voice_cue])
-            
-            # Agregar red flags del triaje
-            text_parts.extend(protocol.triage.red_flags)
-            text_parts.append(protocol.triage.immediate_action)
-            
-            combined_text = " ".join(text_parts)
-            texts.append(combined_text)
-            protocol_ids.append(protocol_id)
-        
-        # Generar embeddings
-        embeddings = self.embedding_generator.generate_embeddings_batch(texts)
-        
-        if not embeddings:
-            print("Error generando embeddings")
+
+        texts: List[str] = []
+        self.protocol_ids = []
+        for pid, proto in self.protocols.items():
+            texts.append(self._text_from_protocol(proto))
+            self.protocol_ids.append(pid)
+
+        # Embeddings
+        embeds = self.embedding_generator.generate_embeddings_batch(texts)
+        if not embeds:
+            print("[RAG] Error generando embeddings")
             return
-        
-        # Crear índice FAISS
-        dimension = len(embeddings[0])
-        self.index = faiss.IndexFlatIP(dimension)  # Inner Product para similitud coseno
-        
-        # Normalizar embeddings para usar inner product como similitud coseno
-        embeddings_array = np.array(embeddings, dtype=np.float32)
-        faiss.normalize_L2(embeddings_array)
-        
-        self.index.add(embeddings_array)
-        self.protocol_ids = protocol_ids
-        
-        print(f"Índice FAISS construido con {len(embeddings)} protocolos")
-    
-    def _build_intent_mapping(self):
-        """Construye mapeo de intents exactos a protocolos."""
+
+        emb = np.asarray(embeds, dtype=np.float32)
+        # Normalizar L2 para usar producto punto como coseno
+        norms = np.linalg.norm(emb, axis=1, keepdims=True)
+        norms[norms == 0.0] = 1.0
+        emb = emb / norms
+
+        if HAVE_FAISS:
+            dim = emb.shape[1]
+            self.index = faiss.IndexFlatIP(dim)
+            self.index.add(emb)
+            self._embeddings = None
+            print(f"[RAG] Índice FAISS construido con {emb.shape[0]} protocolos (dim={dim})")
+        else:
+            self._embeddings = emb
+            self.index = None
+            print(f"[RAG] FAISS no disponible. Usando fallback NumPy con {emb.shape[0]} protocolos.")
+
+    def _build_intent_mapping(self) -> None:
+        """Mapeo de intents exactos a protocolos."""
         self.exact_match_intents = {
             "rcp": ["pa_rcp_adulto_v1", "pa_rcp_nino_v1", "pa_rcp_lactante_v1"],
             "parada cardiorespiratoria": ["pa_rcp_adulto_v1", "pa_rcp_nino_v1"],
@@ -105,116 +138,120 @@ class RAGSearchEngine:
             "ictus": ["pa_ictus_fast_v1"],
             "derrame cerebral": ["pa_ictus_fast_v1"],
             "dolor torácico": ["pa_dolor_toracico_v1"],
-            "dolor en el pecho": ["pa_dolor_toracico_v1"]
+            "dolor en el pecho": ["pa_dolor_toracico_v1"],
         }
-    
+
+    # -------------------------
+    # Búsqueda pública
+    # -------------------------
     def search(self, query: str, context: Optional[Dict[str, str]] = None, top_k: int = 3) -> List[SearchResult]:
-        """Realiza búsqueda híbrida (exact-match + semántica)."""
-        results = []
-        
-        # 1. Intentar exact-match primero
-        query_lower = query.lower()
-        exact_matches = []
-        
-        for intent, protocol_ids in self.exact_match_intents.items():
+        """Búsqueda híbrida: exact-match + semántica."""
+        results: List[SearchResult] = []
+
+        # 1) Exact-match por intents
+        query_lower = (query or "").lower()
+        exact_matches: List[str] = []
+        for intent, pids in self.exact_match_intents.items():
             if intent in query_lower:
-                exact_matches.extend(protocol_ids)
-        
-        # Filtrar por contexto si está disponible
-        if context and "edad" in context:
+                exact_matches.extend(pids)
+
+        # Filtrar por edad si viene en contexto
+        if context and "edad" in context and exact_matches:
             edad = context["edad"]
             exact_matches = [pid for pid in exact_matches if self._matches_age(pid, edad)]
-        
-        # Agregar resultados exact-match con alta relevancia
-        for protocol_id in exact_matches[:top_k]:
-            if protocol_id in self.protocols:
-                protocol = self.protocols[protocol_id]
+
+        # Añadir exactos con score alto
+        for pid in exact_matches[:top_k]:
+            proto = self.protocols.get(pid)
+            if proto:
                 results.append(SearchResult(
-                    protocol_id=protocol_id,
-                    title=protocol.title,
+                    protocol_id=pid,
+                    title=proto.title,
                     relevance_score=1.0,
-                    snippet=protocol.triage.immediate_action
+                    snippet=self._generate_snippet(proto, query)
                 ))
-        
-        # 2. Si no hay exact-matches suficientes, usar búsqueda semántica
-        if len(results) < top_k and self.index is not None:
-            semantic_results = self._semantic_search(query, top_k - len(results))
-            
-            # Evitar duplicados
-            existing_ids = {r.protocol_id for r in results}
-            for result in semantic_results:
-                if result.protocol_id not in existing_ids:
-                    results.append(result)
-        
+
+        # 2) Semántica si faltan resultados
+        remaining = top_k - len(results)
+        if remaining > 0:
+            sem = self._semantic_search(query, remaining)
+            exist = {r.protocol_id for r in results}
+            for r in sem:
+                if r.protocol_id not in exist:
+                    results.append(r)
+
         return results[:top_k]
-    
+
     def _semantic_search(self, query: str, top_k: int) -> List[SearchResult]:
-        """Realiza búsqueda semántica usando FAISS."""
-        if self.index is None:
+        """Búsqueda semántica con FAISS o fallback NumPy."""
+        if top_k <= 0:
             return []
-        
-        # Generar embedding de la consulta
-        query_embedding = self.embedding_generator.generate_embedding(query)
-        if not query_embedding:
+        if self.index is None and self._embeddings is None:
             return []
-        
-        # Normalizar para similitud coseno
-        query_vector = np.array([query_embedding], dtype=np.float32)
-        faiss.normalize_L2(query_vector)
-        
-        # Buscar en el índice
-        scores, indices = self.index.search(query_vector, top_k)
-        
-        results = []
-        for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
-            if idx < len(self.protocol_ids):
-                protocol_id = self.protocol_ids[idx]
-                protocol = self.protocols[protocol_id]
-                
-                # Generar snippet relevante
-                snippet = self._generate_snippet(protocol, query)
-                
-                results.append(SearchResult(
-                    protocol_id=protocol_id,
-                    title=protocol.title,
-                    relevance_score=float(score),
-                    snippet=snippet
-                ))
-        
+
+        q_emb = self.embedding_generator.generate_embedding(query)
+        if not q_emb:
+            return []
+
+        q = np.asarray(q_emb, dtype=np.float32)
+        q_norm = np.linalg.norm(q)
+        if q_norm == 0.0:
+            return []
+        q = q / q_norm
+
+        if HAVE_FAISS and self.index is not None:
+            q_vec = q.reshape(1, -1).astype(np.float32)
+            scores, indices = self.index.search(q_vec, top_k)
+            idxs = indices[0]
+            scs = scores[0]
+        else:
+            # Fallback: producto punto con todos los embeddings normalizados
+            emb = self._embeddings  # (N, D)
+            sims = emb @ q.reshape(-1, 1)  # (N,1)
+            scs = sims.ravel()
+            idxs = np.argsort(-scs)[:top_k]
+
+        results: List[SearchResult] = []
+        for score, idx in zip(scs[:top_k], idxs[:top_k]):
+            if 0 <= int(idx) < len(self.protocol_ids):
+                pid = self.protocol_ids[int(idx)]
+                proto = self.protocols.get(pid)
+                if proto:
+                    results.append(SearchResult(
+                        protocol_id=pid,
+                        title=proto.title,
+                        relevance_score=float(score),
+                        snippet=self._generate_snippet(proto, query)
+                    ))
         return results
-    
+
+    # -------------------------
+    # Utilidades
+    # -------------------------
     def _matches_age(self, protocol_id: str, edad: str) -> bool:
         """Verifica si un protocolo coincide con la edad especificada."""
-        if protocol_id not in self.protocols:
-            return False
-        
-        protocol = self.protocols[protocol_id]
-        protocol_edad = protocol.metadata.edad.lower()
-        edad_lower = edad.lower()
-        
-        # Mapeo de edades
-        if edad_lower in ["adulto", "adult"]:
-            return "adulto" in protocol_edad
-        elif edad_lower in ["niño", "nino", "child"]:
-            return "niño" in protocol_edad or "nino" in protocol_edad
-        elif edad_lower in ["lactante", "bebé", "bebe", "infant"]:
-            return "lactante" in protocol_edad
-        
-        return True  # Si no se especifica, incluir todos
-    
-    def _generate_snippet(self, protocol: Protocol, query: str) -> str:
-        """Genera un snippet relevante del protocolo basado en la consulta."""
-        # Por simplicidad, usar la acción inmediata del triaje
-        if protocol.triage.immediate_action:
-            return protocol.triage.immediate_action
-        
-        # Fallback al primer paso
-        if protocol.steps:
-            return protocol.steps[0].instruction
-        
-        return protocol.title
-    
-    def get_protocol(self, protocol_id: str) -> Optional[Protocol]:
-        """Obtiene un protocolo por su ID."""
-        return self.protocols.get(protocol_id)
+        proto = self.protocols.get(protocol_id)
+        if not proto or not proto.metadata or not proto.metadata.edad:
+            return True
+        protocol_edad = (proto.metadata.edad or "").lower()
+        edad_lower = (edad or "").lower()
 
+        if edad_lower in {"adulto", "adult"}:
+            return "adulto" in protocol_edad
+        if edad_lower in {"niño", "nino", "child"}:
+            return ("niño" in protocol_edad) or ("nino" in protocol_edad)
+        if edad_lower in {"lactante", "bebé", "bebe", "infant"}:
+            return "lactante" in protocol_edad
+        return True
+
+    def _generate_snippet(self, protocol: Protocol, query: str) -> str:
+        """Snippet simple y útil."""
+        if protocol.triage and protocol.triage.immediate_action:
+            return protocol.triage.immediate_action
+        if protocol.steps:
+            first = protocol.steps[0]
+            return getattr(first, "instruction", None) or getattr(first, "action", None) or protocol.title
+        return protocol.title
+
+    def get_protocol(self, protocol_id: str) -> Optional[Protocol]:
+        return self.protocols.get(protocol_id)
