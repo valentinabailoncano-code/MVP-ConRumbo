@@ -1,0 +1,437 @@
+id: pa_quemaduras_v1
+version: "1.0"
+title: "Tratamiento de Quemaduras - Primeros Auxilios"
+category: "traumatismo_termico"
+priority: "urgente"
+target_audience: "todas_edades"
+estimated_duration: "10-30 minutos"
+
+metadata:
+  created_by: "ConRumbo Medical Team"
+  reviewed_by: "Dr. Emergency Medicine"
+  last_updated: "2024-08-31"
+  source: "Cruz Roja Española, Asociación Española de Quemados"
+  language: "es"
+  medical_disclaimer: "Este protocolo no sustituye la atención médica profesional. Quemaduras graves requieren atención hospitalaria."
+
+triggers:
+  intents:
+    - "quemadura"
+    - "quemado"
+    - "fuego"
+    - "agua_hirviendo"
+    - "aceite_caliente"
+    - "quemadura_solar"
+    - "quemadura_electrica"
+    - "quemadura_quimica"
+  
+  conditions:
+    tipo_agente: ["calor", "frio", "quimico", "electrico", "radiacion"]
+    grado: ["primer_grado", "segundo_grado", "tercer_grado"]
+    extension: ["pequena", "moderada", "extensa"]
+    localizacion: ["cara", "manos", "genitales", "articulaciones", "extremidades", "torso"]
+
+safety_alerts:
+  - "Asegure la escena antes de actuar"
+  - "NO aplique hielo directamente"
+  - "NO use remedios caseros (pasta dental, mantequilla, etc.)"
+  - "Llame al 112 en quemaduras graves"
+  - "NO reviente ampollas"
+
+classification:
+  by_depth:
+    primer_grado:
+      description: "Afecta solo la epidermis"
+      signs: ["Enrojecimiento", "Dolor", "Piel seca", "Sin ampollas"]
+      healing: "3-7 días sin cicatriz"
+      example: "Quemadura solar leve"
+    
+    segundo_grado_superficial:
+      description: "Afecta epidermis y dermis superficial"
+      signs: ["Enrojecimiento", "Ampollas", "Dolor intenso", "Húmeda"]
+      healing: "7-21 días, cicatriz mínima"
+      example: "Escaldadura con agua hirviendo"
+    
+    segundo_grado_profundo:
+      description: "Afecta epidermis y dermis profunda"
+      signs: ["Rojo/blanco", "Ampollas", "Dolor variable", "Menos húmeda"]
+      healing: ">21 días, cicatriz probable"
+      example: "Contacto prolongado con calor"
+    
+    tercer_grado:
+      description: "Destrucción completa de piel"
+      signs: ["Blanca/negra", "Seca", "Sin dolor", "Textura coriácea"]
+      healing: "No cicatriza espontáneamente"
+      example: "Fuego directo, electricidad alta tensión"
+  
+  by_extension:
+    regla_del_9:
+      cabeza_cuello: "9%"
+      brazo_derecho: "9%"
+      brazo_izquierdo: "9%"
+      torso_anterior: "18%"
+      torso_posterior: "18%"
+      pierna_derecha: "18%"
+      pierna_izquierda: "18%"
+      genitales: "1%"
+
+steps:
+  - id: 1
+    action: "Seguridad de la escena y detener el proceso"
+    instruction: "Asegure la escena. Detenga el proceso de quemadura: apague fuego, retire de la fuente de calor, corte electricidad, retire ropa no adherida."
+    voice_cue: "Asegure la escena, detenga el proceso de quemadura, retire de la fuente"
+    duration_seconds: 60
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 60
+      next_button: true
+      illustration: "seguridad_escena_quemadura"
+    
+    safety_measures:
+      fire:
+        - "Apagar fuego con agua, manta ignífuga o rodar por el suelo"
+        - "NO usar agua en fuegos eléctricos o químicos"
+        - "Ventilación del área"
+      
+      chemical:
+        - "Retirar ropa contaminada"
+        - "Lavado abundante con agua (excepto cal viva)"
+        - "Usar equipo de protección"
+      
+      electrical:
+        - "Cortar electricidad en el interruptor principal"
+        - "NO tocar a la víctima si sigue en contacto"
+        - "Usar material no conductor para separar"
+    
+    clothing_removal:
+      do:
+        - "Retirar ropa no adherida"
+        - "Cortar alrededor de ropa adherida"
+        - "Retirar joyas antes de que aparezca edema"
+      
+      dont:
+        - "NO tirar de ropa adherida a la piel"
+        - "NO retirar ropa de quemaduras extensas"
+        - "NO usar fuerza"
+    
+    next_step_logic:
+      if_continue: 2
+
+  - id: 2
+    action: "Evaluación inicial de la quemadura"
+    instruction: "Evalúe el grado, extensión y localización de la quemadura. Identifique si es una quemadura grave que requiere atención médica inmediata."
+    voice_cue: "Evalúe grado, extensión y localización. Identifique si es grave"
+    duration_seconds: 120
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 120
+      next_button: true
+      illustration: "evaluacion_quemadura"
+    
+    assessment_criteria:
+      severity_indicators:
+        minor:
+          - "Primer grado cualquier extensión"
+          - "Segundo grado <10% en adultos"
+          - "Segundo grado <5% en niños"
+        
+        moderate:
+          - "Segundo grado 10-20% en adultos"
+          - "Segundo grado 5-10% en niños"
+          - "Tercer grado <2%"
+        
+        major:
+          - "Segundo grado >20% en adultos"
+          - "Segundo grado >10% en niños"
+          - "Tercer grado >2%"
+          - "Quemaduras en cara, manos, pies, genitales"
+          - "Quemaduras eléctricas o químicas"
+          - "Quemaduras con trauma asociado"
+    
+    immediate_hospital_criteria:
+      - "Quemaduras de tercer grado"
+      - "Quemaduras en cara, manos, pies, genitales, articulaciones"
+      - "Quemaduras eléctricas"
+      - "Quemaduras químicas extensas"
+      - "Quemaduras con trauma por inhalación"
+      - "Quemaduras en niños <2 años o adultos >60 años"
+      - "Quemaduras >10% superficie corporal"
+    
+    next_step_logic:
+      if_major_burn: "call_112_immediately"
+      if_continue: 3
+
+  - id: 3
+    action: "Enfriamiento inmediato"
+    instruction: "Enfríe la quemadura con agua fría (15-20°C) durante 10-20 minutos. Comience lo antes posible, idealmente dentro de los primeros 3 minutos."
+    voice_cue: "Enfríe con agua fría 15-20 grados durante 10-20 minutos"
+    duration_seconds: 1200
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 1200
+      next_button: false
+      auto_advance: true
+      illustration: "enfriamiento_quemadura"
+    
+    cooling_technique:
+      water_temperature: "15-20°C (agua del grifo)"
+      duration: "10-20 minutos"
+      method: "Flujo suave, no a presión"
+      coverage: "Toda el área quemada"
+    
+    cooling_benefits:
+      - "Reduce temperatura tisular"
+      - "Disminuye profundidad de la quemadura"
+      - "Reduce dolor e inflamación"
+      - "Previene progresión del daño"
+    
+    contraindications:
+      - "NO usar hielo o agua helada"
+      - "NO enfriar quemaduras >20% superficie corporal (hipotermia)"
+      - "NO enfriar más de 20 minutos"
+      - "Cuidado en niños pequeños y ancianos"
+    
+    special_situations:
+      chemical_burns:
+        - "Lavado abundante 15-30 minutos"
+        - "Excepto cal viva (usar aceite)"
+        - "Retirar ropa contaminada"
+      
+      electrical_burns:
+        - "Buscar puntos de entrada y salida"
+        - "Monitorear arritmias cardíacas"
+        - "Evaluar trauma asociado"
+    
+    next_step_logic:
+      if_continue: 4
+
+  - id: 4
+    action: "Evaluación del dolor y estado general"
+    instruction: "Evalúe el nivel de dolor del paciente y su estado general. Busque signos de shock o complicaciones. Mantenga al paciente calmado."
+    voice_cue: "Evalúe dolor y estado general, busque signos de shock"
+    duration_seconds: 60
+    critical: false
+    
+    ui:
+      timer: true
+      timer_duration: 60
+      next_button: true
+      illustration: "evaluacion_dolor"
+    
+    pain_assessment:
+      scale_1_10:
+        mild: "1-3 (tolerable)"
+        moderate: "4-6 (interfiere actividades)"
+        severe: "7-10 (incapacitante)"
+    
+    shock_signs:
+      - "Pulso rápido y débil"
+      - "Presión arterial baja"
+      - "Piel pálida, fría y húmeda"
+      - "Ansiedad, confusión"
+      - "Sed intensa"
+      - "Náuseas y vómitos"
+    
+    comfort_measures:
+      - "Posición cómoda"
+      - "Ambiente tranquilo"
+      - "Explicar procedimientos"
+      - "Apoyo emocional"
+    
+    next_step_logic:
+      if_continue: 5
+
+  - id: 5
+    action: "Protección de la quemadura"
+    instruction: "Cubra la quemadura con apósito estéril húmedo o paño limpio húmedo. NO aplique cremas, ungüentos o remedios caseros. NO reviente ampollas."
+    voice_cue: "Cubra con apósito estéril húmedo. NO cremas ni remedios caseros"
+    duration_seconds: 180
+    critical: false
+    
+    ui:
+      timer: true
+      timer_duration: 180
+      next_button: true
+      illustration: "proteccion_quemadura"
+    
+    dressing_materials:
+      preferred:
+        - "Gasa estéril húmeda"
+        - "Apósito no adherente"
+        - "Paño limpio húmedo"
+      
+      acceptable:
+        - "Film transparente (pequeñas quemaduras)"
+        - "Toalla limpia húmeda"
+      
+      avoid:
+        - "Algodón directo"
+        - "Materiales adherentes"
+        - "Vendajes secos"
+    
+    dressing_technique:
+      - "Cubrir completamente la quemadura"
+      - "No apretar demasiado"
+      - "Mantener húmedo pero no empapado"
+      - "Cambiar si se seca"
+    
+    what_not_to_apply:
+      - "Mantequilla, aceite, margarina"
+      - "Pasta dental"
+      - "Clara de huevo"
+      - "Hielo directo"
+      - "Alcohol"
+      - "Cremas con anestésicos"
+    
+    blister_care:
+      intact_blisters:
+        - "NO reventar"
+        - "Proteger de rotura"
+        - "Cubrir con apósito"
+      
+      broken_blisters:
+        - "Limpiar suavemente"
+        - "NO retirar piel suelta"
+        - "Aplicar apósito estéril"
+    
+    next_step_logic:
+      if_continue: 6
+
+  - id: 6
+    action: "Manejo del dolor y monitoreo"
+    instruction: "Administre analgésicos si están disponibles y no hay contraindicaciones. Monitoree constantemente al paciente. Prepare para traslado si es necesario."
+    voice_cue: "Manejo del dolor, monitoreo constante, prepare traslado si necesario"
+    duration_seconds: null
+    critical: false
+    
+    ui:
+      timer: false
+      next_button: false
+      monitoring_checklist: true
+      illustration: "monitoreo_quemadura"
+    
+    pain_management:
+      non_pharmacological:
+        - "Enfriamiento continuo"
+        - "Posición cómoda"
+        - "Distracción"
+        - "Técnicas de relajación"
+      
+      pharmacological:
+        - "Paracetamol (según peso/edad)"
+        - "Ibuprofeno (si no hay contraindicaciones)"
+        - "NO aspirina en niños"
+    
+    monitoring_parameters:
+      vital_signs:
+        - "Pulso y presión arterial"
+        - "Frecuencia respiratoria"
+        - "Temperatura corporal"
+        - "Nivel de conciencia"
+      
+      burn_specific:
+        - "Progresión de la quemadura"
+        - "Signos de infección"
+        - "Circulación distal"
+        - "Función de extremidades"
+    
+    infection_signs:
+      - "Aumento del dolor"
+      - "Enrojecimiento periférico"
+      - "Calor local"
+      - "Secreción purulenta"
+      - "Fiebre"
+      - "Mal olor"
+    
+    when_to_seek_medical_care:
+      immediate:
+        - "Quemaduras graves (ver criterios paso 2)"
+        - "Signos de shock"
+        - "Dificultad respiratoria"
+        - "Quemaduras eléctricas"
+      
+      within_24_hours:
+        - "Quemaduras de segundo grado >5cm"
+        - "Quemaduras en cara, manos, pies"
+        - "Dolor no controlable"
+        - "Signos de infección"
+
+special_populations:
+  children:
+    considerations:
+      - "Mayor riesgo de hipotermia durante enfriamiento"
+      - "Menor tolerancia a pérdida de líquidos"
+      - "Cálculo de superficie corporal diferente"
+      - "Mayor riesgo de shock"
+    
+    modifications:
+      - "Enfriamiento más cuidadoso"
+      - "Monitoreo más frecuente"
+      - "Umbral más bajo para hospitalización"
+  
+  elderly:
+    considerations:
+      - "Piel más frágil"
+      - "Cicatrización más lenta"
+      - "Mayor riesgo de complicaciones"
+      - "Medicaciones que afectan respuesta"
+    
+    modifications:
+      - "Manejo más conservador"
+      - "Evaluación médica temprana"
+      - "Atención a comorbilidades"
+
+complications:
+  immediate:
+    shock:
+      description: "Pérdida de líquidos y proteínas"
+      management: "Posición, abrigo, monitoreo"
+    
+    airway_compromise:
+      description: "Edema por inhalación de humo"
+      signs: "Ronquera, estridor, dificultad respiratoria"
+      action: "Oxígeno, posición sentado, traslado urgente"
+  
+  delayed:
+    infection:
+      prevention: "Técnica aséptica, cambios de apósito"
+      treatment: "Evaluación médica, antibióticos"
+    
+    contractures:
+      prevention: "Movilización temprana, fisioterapia"
+      areas_risk: "Articulaciones, cuello, axilas"
+
+prevention_education:
+  home_safety:
+    - "Detectores de humo"
+    - "Plan de escape"
+    - "Temperatura agua caliente <49°C"
+    - "Protección en cocina"
+  
+  workplace_safety:
+    - "Equipo de protección personal"
+    - "Entrenamiento en seguridad"
+    - "Procedimientos de emergencia"
+  
+  sun_protection:
+    - "Protector solar FPS >30"
+    - "Ropa protectora"
+    - "Evitar horas pico (10-16h)"
+
+references:
+  - "Asociación Española de Quemados - Guías Clínicas"
+  - "Cruz Roja Española - Manual de Primeros Auxilios"
+  - "American Burn Association - Guidelines"
+  - "WHO - Emergency Care Guidelines"
+
+legal_notes:
+  - "Documentar extensión y características"
+  - "Fotografías si es apropiado y con consentimiento"
+  - "Derivación médica obligatoria en quemaduras graves"
+

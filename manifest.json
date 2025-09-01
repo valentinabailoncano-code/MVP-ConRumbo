@@ -1,0 +1,51 @@
+{
+  "name": "ConRumbo - Primeros Auxilios",
+  "short_name": "ConRumbo",
+  "description": "Guía de primeros auxilios y emergencias paso a paso con voz",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#dc2626",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "medical", "emergency"],
+  "shortcuts": [
+    {
+      "name": "RCP",
+      "short_name": "RCP",
+      "description": "Reanimación cardiopulmonar",
+      "url": "/protocol/rcp",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Atragantamiento",
+      "short_name": "Atragantamiento",
+      "description": "Maniobra de Heimlich",
+      "url": "/protocol/atragantamiento",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Llamar 112",
+      "short_name": "112",
+      "description": "Emergencias",
+      "url": "tel:112",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+

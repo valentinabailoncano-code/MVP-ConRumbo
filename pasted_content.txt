@@ -1,0 +1,279 @@
+ConRumbo – MVP Técnico (First Aid & Emergencies)
+
+## 0) Propósito y límites (críticos)
+
+* **Objetivo:** Guía de primeros auxilios **paso a paso**, con **voz** y **pantalla**, optimizada para actuar bajo **estrés**.
+* **No diagnostica** ni sustituye asistencia médica. Debe **recomendar llamar al 112** (o emergencias locales) cuando aplique y mostrar **disclaimer** en cada flujo crítico.
+* **Fuentes médicas a respetar** (para construir la base de conocimiento y validación):
+
+  * **ERC 2021 First Aid Guidelines** (posición lateral, shock, asfixia, hemorragias, quemaduras, anafilaxia, etc.). ([cprguidelines.eu][1], [erc.edu][2], [ScienceDirect][3])
+  * **AHA CPR/ECC** página de guías vigentes (para coherencia con RCP adultos/niños/lactantes). ([cpr.heart.org][4])
+  * **ILCOR CoSTR** (sumario 2025 para alinear criterios y educación). ([ilcor.org][5])
+  * **OMS/WHO** materiales recientes para primeros auxilios comunitarios (guía de bolsillo y temario). ([OMS][6])
+  * **Contexto España (referencias públicas):** Cruz Roja Española, SEMES. ([Cruz Roja][7], [semesrcp.org][8], [semes.org][9])
+
+> La IA **debe** priorizar estas fuentes y bloquear respuestas que las contradigan.
+
+---
+
+## 1) Alcance del MVP (v1.0)
+
+**Plataforma objetivo inmediata:** Web app (PWA) + prototipo móvil (Expo/React Native) para la parte de cámara.
+**Idiomas:** ES (ES-es) en v1, con arquitectura multilenguaje.
+**Modo offline:** Contenido y flujos críticos en caché (Service Worker/PWA) + fallback textual si no hay TTS/STT.
+
+### 1.1 Flujos de emergencia incluidos (v1)
+
+1. **RCP** (adulto/niño/lactante), con metrónomo 100–120/min, guía por voz y temporizador de ciclos. (Alineado AHA/ERC/ILCOR). ([cpr.heart.org][4], [cprguidelines.eu][1], [ilcor.org][5])
+2. **Atragantamiento** (adulto/niño/lactante): evaluación de tos efectiva, compresiones abdominales, golpes interescapulares, alternancia y alerta al 112. ([cprguidelines.eu][1])
+3. **Hemorragias**: presión directa, vendaje compresivo, elevación y criterios de torniquete (si corresponde). ([cprguidelines.eu][1])
+4. **Quemaduras**: enfriado 10–20 min con agua fría, nunca cremas, criterios de gravedad. ([cprguidelines.eu][1], [Cruz Roja][7])
+5. **Anafilaxia**: signos de alarma, autoinyector si disponible, posición adecuada y 112. ([cprguidelines.eu][1])
+6. **Convulsiones**: proteger cabeza, tiempo del episodio, no introducir objetos en boca, recuperación post-crisis. ([cprguidelines.eu][1])
+7. **ACV/ictus (FAST)** y **dolor torácico**: reconocimiento rápido y derivación inmediata. ([cprguidelines.eu][1])
+
+> **Criterio de salida universal:** si hay inconsciencia, respiración anormal, sangrado no controlable, signos de shock o sospecha de anafilaxia/ictus/infarto ⇒ **llamar 112**.
+
+---
+
+## 2) Bot de IA de Preguntas (voz + texto)
+
+### 2.1 Arquitectura recomendada
+
+* **Pipeline voz**:
+
+  * **STT (ASR)** on-device si es posible (ej., Vosk / Whisper tiny local para web; Android Speech / iOS Speech API como fallback).
+  * **TTS** local (Web Speech Synthesis) + fallback nube si está disponible.
+* **Orquestación**: LLM con **Function Calling** + **RAG** sobre un **índice curado** (solo protocolos validados).
+* **Guardarraíles (safety):** Pauta de negativa ante preguntas diagnósticas (“¿tengo un infarto?”) y redirección a evaluación de síntomas + 112.
+
+### 2.2 Estructura de conocimiento (para RAG)
+
+* **Formato YAML/JSON por protocolo**, por ejemplo:
+
+```yaml
+id: pa_asfixia_adulto_v1
+title: Atragantamiento (adulto)
+sources: [ERC_2021_FirstAid, WHO_CFar_2025]
+triage:
+  red_flags:
+    - "No puede hablar o respirar"
+    - "Cianosis evidente"
+  immediate_action: "Llamar 112 si no respira o pierde conciencia"
+steps:
+  - "Pídale que tosa si puede."
+  - "Si no puede toser: 5 golpes interescapulares firmes."
+  - "Si persiste: 5 compresiones abdominales."
+  - "Alternar 5/5; si colapsa: RCP."
+voice_cues:
+  - "Voy contigo. ¿Puede toser? Responde sí o no."
+ui:
+  timer: false
+  illustrations: ["back_blows.png", "abdominal_thrusts.png"]
+```
+
+* **Indexación**: usar embeddings + metadatos (edad, entorno, riesgo, manos libres, idioma).
+* **Búsqueda**: semántica con re-ranker y **exact-match** por intents (p.ej., “se está ahogando”, “no respira”, “quemadura aceite”).
+
+### 2.3 Intents y slots mínimos
+
+* **Intents**: `parada_cardiorespiratoria`, `atragantamiento`, `hemorragia`, `quemadura`, `convulsion`, `anafilaxia`, `dolor_toracico`, `ictus_fast`, `caida_traumatismo`, `mareo_sincope`.
+* **Slots**: `edad` (adulto/niño/lactante), `estado_conciencia`, `respiracion` (normal/anormal/ausente), `sangrado` (sí/no/intenso), `lugar` (casa/vía pública), `hay_ayuda` (sí/no), `dispone_DEA` (sí/no).
+
+### 2.4 Prompting base (sistema)
+
+* **Rol del sistema (resumen):**
+
+  * Da **instrucciones cortas y claras**, 1-2 frases por paso.
+  * **Primero seguridad de la escena**, luego evaluación rápida y **acción**.
+  * **Habla en segunda persona** (“haz…”, “llama…”).
+  * Siempre que corresponda, incluye: **“Si estás solo/a y es seguro, activa manos libres y llama al 112.”**
+
+---
+
+## 3) UI/UX esencial
+
+* **Modo manos libres** (botón grande “Hablar”).
+* **Tarjetas de pasos** con tipografía grande y pictogramas.
+* **Metrónomo RCP** con vibración/sonido.
+* **Botón 112** fijo en pantalla.
+* **Modo alto contraste** + **modo texto grande** + **guía por voz**.
+
+---
+
+## 4) Fase 1 del “Scanner 3D” (Reconocimiento con cámara)
+
+**Objetivo realista v1:** ayuda **visual** para situar la lesión y mejorar la guía; **no medir constantes vitales** ni diagnosticar.
+**Implementación dual (según dispositivo):**
+
+* **Android**: **ARCore Depth API** + **MediaPipe Pose Landmarker** (coordenadas 2D/3D de puntos del cuerpo). ([Google for Developers][10], [Google AI for Developers][11])
+* **iOS**: **ARKit Body Tracking** para esqueleto 3D y anclaje de “punto de lesión”. ([Apple Developer][12])
+
+### 4.1 Capacidades v1
+
+* **Detección de persona** y **esqueleto básico** (cabeza/torso/extremidades).
+* **Marcador de lesión**: el usuario **toca la pantalla** donde ve la herida → el sistema “ancla” el punto en el cuerpo.
+* **Overlay educativo**: flechas/zonas para **dónde presionar** (hemorragia), **dónde enfriar** (quemadura), **dónde colocar manos** (RCP en adulto).
+* **Privacidad**: **procesamiento on-device**; no subir vídeo/frames sin permiso; **anónimo** y efímero.
+
+> Nota: El ARCore Depth da **mapas de profundidad** para geometría básica; MediaPipe Pose ofrece **landmarks 3D**. ARKit permite **seguimiento corporal** nativo. ([Google for Developers][10], [Google AI for Developers][11], [Apple Developer][12])
+
+### 4.2 Fuera de alcance v1
+
+* Lectura fiable de **FC/HR** o **VFC/HRV** por cámara. (Si se quiere un “preview” experimental, solo como **demo** con PPG por dedo, marcado como **no clínico**).
+* Reconocimiento de **sangrado** o **quemaduras** por color/segmentación automática: posible **PoC** pero **no decisorio**.
+
+---
+
+## 5) Requisitos no funcionales
+
+* **Latencia**: respuestas de bot < 1.5 s (texto), TTS < 2.5 s.
+* **Offline**: protocolos críticos cacheados; RCP y atragantamiento deben funcionar sin red.
+* **Telemetría ética** (opt-in): eventos anónimos para mejorar UX, nunca datos de salud identificables (GDPR).
+* **Testing de seguridad**: escenarios con “usuario confundido”, ruido, niños, una mano ocupada, etc.
+
+---
+
+## 6) Tech Stack sugerido
+
+### 6.1 Web (MVP principal)
+
+* **Frontend**: React + PWA (o Streamlit si prefieres hiper-velocidad; para cámara/AR mejor React).
+* **Voz**: Web Speech API (TTS/STT) + fallback a motores locales/nube.
+* **Estado**: Zustand/Redux.
+* **Metrónomo RCP**: WebAudio API.
+* **RAG/LLM**: backend Python (FastAPI) con embeddings (FAISS) + LLM con Function Calling.
+
+### 6.2 Móvil (prototipo cámara)
+
+* **Expo/React Native** con módulos nativos:
+
+  * Android: ARCore Depth + MediaPipe (RN bridge). ([Google for Developers][10])
+  * iOS: ARKit Body Tracking (via RN bridge/Unity/Swift module). ([Apple Developer][12])
+
+### 6.3 Estructura de repo
+
+```
+conrumbo/
+  backend/
+    app.py (FastAPI)
+    rag/
+      ingest.py
+      index.faiss
+      protocols/*.yaml
+    functions/
+      triage.py
+      steps_player.py
+  web/
+    src/
+      pages/*  components/*  store/*
+      features/rcp/*  atragantamiento/* ...
+      speech/*
+      pwa-sw.js
+  mobile/
+    app/ (Expo)
+    ios-native/ (ARKit bridge)
+    android-native/ (ARCore + MediaPipe)
+  tests/
+    e2e/  redteam/
+  docs/
+    safety.md  sources.md  ux_flows.md
+```
+
+---
+
+## 7) Data & Ingest (cómo “encontrar la info”)
+
+1. **Construir un corpus curado** con **protocolos estructurados** (YAML/JSON) a partir de: **ERC 2021**, **WHO 2025 (CFAR)**, **AHA CPR/ECC** (enlaces oficiales), y notas locales (Cruz Roja, SEMES). ([cprguidelines.eu][1], [OMS][6], [cpr.heart.org][4], [Cruz Roja][7], [semesrcp.org][8])
+2. **No scrapear contenidos con copyright** sin permiso. Priorizar documentos públicos/abiertos (WHO, sumarios ERC/ILCOR).
+3. **Normalizar** los pasos en bloques: *Evaluación* → *Acción* → *Re-evaluación* → *Salida*.
+4. **Etiquetar** cada paso con metadatos: `edad`, `materiales` (gasa, agua, autoinyector), `riesgo`, `tiempo_sugerido`.
+
+---
+
+## 8) Funciones del backend (FastAPI – ejemplos)
+
+```python
+POST /api/triage
+# body: { "intent": "atragantamiento", "edad": "adulto", "estado_conciencia": "consciente", ... }
+# resp: { "risk": "alto", "recommend": ["llamar_112"], "next_flow": "pa_asfixia_adulto_v1" }
+
+POST /api/next_step
+# body: { "flow_id": "pa_asfixia_adulto_v1", "step_idx": 2, "user_feedback": "no funciona" }
+# resp: { "say": "Alterna 5 golpes y 5 compresiones abdominales...", "ui": {...} }
+
+POST /api/voice
+# STT/TTS helpers (opcional si lo haces en frontend)
+```
+
+---
+
+## 9) Casos de prueba (aceptación)
+
+* **RCP adulto**: usuario dice “no respira” → flujo inicia metrónomo, 112, guía 30:2, recordatorio cambio reanimador cada 2 min. (Alineado guías). ([cpr.heart.org][4])
+* **Atragantamiento niño**: tos inefectiva → 5 golpes interescapulares, 5 compresiones torácicas (niño), alternar y 112 si empeora. ([cprguidelines.eu][1])
+* **Quemadura aceite**: agua fría 10–20 min, retirar anillos/ropa no adherida, no cremas, cubrir estéril. ([cprguidelines.eu][1], [Cruz Roja][7])
+* **Scanner v1**: detecta esqueleto, fija marcador de lesión en antebrazo y muestra overlay de vendaje compresivo; no guarda imágenes.
+
+---
+
+## 10) Seguridad y cumplimiento
+
+* **Mensajes clave automáticos** en alto riesgo: “Detén la acción y **llama al 112 ahora**.”
+* **Consentimiento** para usar cámara y analítica.
+* **GDPR**: datos locales, minimización, sin PII; logs anónimos.
+
+---
+
+## 11) Glosario (simple)
+
+* **RAG**: motor que “lee” tus documentos validados y responde con ellos.
+* **STT/ASR**: pasar voz a texto. **TTS**: texto a voz.
+* **Reconocimiento visual con la cámara**: que la app entienda lo que ve (pose, profundidad) para colocar guías visuales; **no** diagnostica.
+* **PPG (demo opcional)**: estimar pulso con el dedo en la cámara; **no clínico**.
+* **Landmarks**: puntos clave del cuerpo (hombros, codos, etc.). MediaPipe/ARKit los dan en 2D/3D. ([Google AI for Developers][11], [Apple Developer][12])
+
+---
+
+## 12) Roadmap corto
+
+* **Semana 1–2**: Corpus YAML + RAG + flujos RCP/atragantamiento/hemorragias; PWA básica con TTS; metrónomo.
+* **Semana 3–4**: STT robusto; más protocolos (quemaduras, convulsiones, anafilaxia); test de estrés.
+* **Semana 5–6**: Prototipo cámara (ARCore/ARKit + Pose) con **marcador de lesión**; overlay educativo; pruebas privadas. ([Google for Developers][10], [Apple Developer][12])
+
+---
+
+## 13) Criterios de “listo para demo”
+
+* Flujos críticos funcionan **offline**.
+* Bot por voz guía **sin ambigüedad** y **sin diagnósticos**.
+* Scanner v1 coloca **marcador estable** en el cuerpo y muestra overlays útiles.
+* Llega a **>90%** de éxito en 30 escenarios de prueba predefinidos.
+
+---
+
+## 14) Referencias técnicas clave (para el equipo/IA)
+
+* **ERC 2021 – First Aid Guidelines** (documento base de primeros auxilios). ([cprguidelines.eu][1])
+* **WHO Community First Aid (2025)**: guía de bolsillo + temario. ([OMS][6])
+* **AHA CPR/ECC – portal de guías**. ([cpr.heart.org][4])
+* **ILCOR CoSTR 2025 – resumen ejecutivo** (alineación global). ([ilcor.org][5])
+* **MediaPipe Pose Landmarker (Android/Web/Python)**. ([Google AI for Developers][11])
+* **ARKit Body Tracking** (iOS). ([Apple Developer][12])
+* **ARCore Depth API** (Android + codelabs). ([Google for Developers][10], [Google Codelabs][13])
+
+---
+
+[1]: https://cprguidelines.eu/assets/guidelines/European-Resuscitation-Council-Guidelines-2021-Fi.pdf?utm_source=chatgpt.com "European Resuscitation Council Guidelines 2021: First aid"
+[2]: https://www.erc.edu/assets/documents/RESUS-8995-Exec-Summary_copy.pdf?utm_source=chatgpt.com "Executive summary"
+[3]: https://www.sciencedirect.com/science/article/pii/S0300957221000666?utm_source=chatgpt.com "European Resuscitation Council Guidelines 2021: First aid"
+[4]: https://cpr.heart.org/en/resuscitation-science/cpr-and-ecc-guidelines?utm_source=chatgpt.com "CPR and ECC Guidelines"
+[5]: https://ilcor.org/uploads/Executive-Summary-2025-COSTR.pdf?utm_source=chatgpt.com "Executive Summary 2025 CoSTR"
+[6]: https://cdn.who.int/media/docs/default-source/integrated-health-services-%28ihs%29/csy/cfar-pocketguide.pdf?sfvrsn=a4ac249c_1&utm_source=chatgpt.com "Community First Aid Response Pocket Guide"
+[7]: https://www.cruzroja.es/guiaprevencion/primeros-auxilios.html?utm_source=chatgpt.com "primeros auxilios"
+[8]: https://www.semesrcp.org/wp-content/uploads/2021/06/SVB-PASO-A-PASO-BLS-Algorithms-STEP-BY-STEP.pdf?utm_source=chatgpt.com "SOPORTE VITAL BÁSICO PASO A PASO - SEMES RCP"
+[9]: https://www.semes.org/?utm_source=chatgpt.com "SEMES: Sociedad Española de Medicina de Urgencias y ..."
+[10]: https://developers.google.com/ar/develop/depth?utm_source=chatgpt.com "Depth adds realism | ARCore"
+[11]: https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker?utm_source=chatgpt.com "Pose landmark detection guide - Google AI for Developers"
+[12]: https://developer.apple.com/documentation/arkit/arbodytrackingconfiguration?utm_source=chatgpt.com "ARBodyTrackingConfiguration"
+[13]: https://codelabs.developers.google.com/codelabs/arcore-depth?utm_source=chatgpt.com "Use the ARCore Depth API for immersive augmented reality ..."

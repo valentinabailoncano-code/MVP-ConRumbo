@@ -1,0 +1,397 @@
+id: pa_hemorragias_v1
+version: "1.0"
+title: "Control de Hemorragias - Primeros Auxilios"
+category: "traumatismo_hemorragico"
+priority: "urgente"
+target_audience: "todas_edades"
+estimated_duration: "5-15 minutos"
+
+metadata:
+  created_by: "ConRumbo Medical Team"
+  reviewed_by: "Dr. Emergency Medicine"
+  last_updated: "2024-08-31"
+  source: "Cruz Roja Española, SAMUR-PC, Guías ATLS"
+  language: "es"
+  medical_disclaimer: "Este protocolo no sustituye la atención médica profesional. En caso de hemorragia severa, llame al 112."
+
+triggers:
+  intents:
+    - "hemorragia"
+    - "sangrado"
+    - "corte_profundo"
+    - "herida_sangrante"
+    - "perdida_sangre"
+  
+  conditions:
+    tipo_hemorragia: ["externa", "interna_sospechada"]
+    severidad: ["leve", "moderada", "severa", "masiva"]
+    localizacion: ["extremidad", "torso", "cabeza", "cuello"]
+    estado_conciencia: ["consciente", "alterado", "inconsciente"]
+
+safety_alerts:
+  - "Use guantes o barrera protectora SIEMPRE"
+  - "Llame al 112 inmediatamente en hemorragias severas"
+  - "NO retire objetos empalados"
+  - "Controle sus propias emociones para ayudar efectivamente"
+
+classification:
+  severity_levels:
+    leve:
+      description: "Sangrado superficial, controlable fácilmente"
+      signs: ["Sangrado lento", "Herida superficial", "Paciente estable"]
+      urgency: "baja"
+    
+    moderada:
+      description: "Sangrado constante que requiere presión directa"
+      signs: ["Sangrado continuo", "Herida profunda", "Empapa gasas rápidamente"]
+      urgency: "media"
+    
+    severa:
+      description: "Sangrado abundante, riesgo de shock"
+      signs: ["Sangrado profuso", "Palidez", "Sudoración fría", "Pulso rápido"]
+      urgency: "alta"
+    
+    masiva:
+      description: "Hemorragia que amenaza la vida inmediatamente"
+      signs: ["Sangrado arterial", "Pérdida de conciencia", "Shock", "Charco de sangre"]
+      urgency: "crítica"
+
+steps:
+  - id: 1
+    action: "Evaluación inicial y protección"
+    instruction: "Evalúe la escena por seguridad. Póngase guantes o use barrera protectora. Identifique la fuente y gravedad del sangrado. Mantenga la calma."
+    voice_cue: "Evalúe la seguridad, use protección, identifique la fuente del sangrado"
+    duration_seconds: 30
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 30
+      next_button: true
+      illustration: "evaluacion_hemorragia"
+    
+    protection_measures:
+      - "Guantes de nitrilo o látex"
+      - "Bolsa plástica como barrera"
+      - "Tela limpia si no hay guantes"
+      - "Evitar contacto directo con sangre"
+    
+    assessment_points:
+      - "¿Dónde está sangrando?"
+      - "¿Qué cantidad de sangre se ha perdido?"
+      - "¿Hay objetos empalados?"
+      - "¿El paciente está consciente?"
+      - "¿Hay signos de shock?"
+    
+    next_step_logic:
+      if_massive_bleeding: "call_112_immediately"
+      if_continue: 2
+
+  - id: 2
+    action: "Exposición y localización exacta"
+    instruction: "Retire o corte la ropa alrededor de la herida para ver claramente. NO retire objetos empalados. Localice exactamente el punto de sangrado."
+    voice_cue: "Retire la ropa para ver la herida. NO toque objetos empalados"
+    duration_seconds: 20
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 20
+      next_button: true
+      illustration: "exposicion_herida"
+    
+    technique_details:
+      - "Corte la ropa, no la quite tirando"
+      - "Preserve la intimidad del paciente"
+      - "Busque múltiples heridas"
+      - "Identifique el tipo de sangrado"
+    
+    bleeding_types:
+      arterial:
+        description: "Sangre roja brillante, sale a borbotones"
+        urgency: "máxima"
+        characteristics: ["Sincronizado con pulso", "Presión alta", "Color rojo vivo"]
+      
+      venoso:
+        description: "Sangre roja oscura, flujo continuo"
+        urgency: "alta"
+        characteristics: ["Flujo constante", "Color rojo oscuro", "Menos presión"]
+      
+      capilar:
+        description: "Sangrado superficial, goteo lento"
+        urgency: "baja"
+        characteristics: ["Sangrado lento", "Superficie amplia", "Fácil control"]
+    
+    next_step_logic:
+      if_impaled_object: "impaled_object_protocol"
+      if_continue: 3
+
+  - id: 3
+    action: "Presión directa sobre la herida"
+    instruction: "Aplique presión directa y firme sobre la herida con gasa estéril, paño limpio o la mano enguantada. Mantenga presión constante durante al menos 10 minutos."
+    voice_cue: "Presión directa y firme sobre la herida. Mantenga 10 minutos mínimo"
+    duration_seconds: 600
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 600
+      next_button: false
+      auto_advance: true
+      illustration: "presion_directa"
+    
+    technique_details:
+      - "Presión firme y constante"
+      - "Use toda la palma de la mano"
+      - "NO levante para mirar durante los primeros 10 minutos"
+      - "Añada más gasas si se empapan, NO retire las primeras"
+    
+    materials_preference:
+      1: "Gasa estéril"
+      2: "Paño limpio"
+      3: "Toalla limpia"
+      4: "Ropa limpia"
+      5: "Mano enguantada (último recurso)"
+    
+    monitoring_during_pressure:
+      - "Estado de conciencia del paciente"
+      - "Color de la piel (palidez)"
+      - "Pulso y respiración"
+      - "Signos de shock"
+    
+    next_step_logic:
+      if_bleeding_controlled: 5
+      if_bleeding_continues: 4
+
+  - id: 4
+    action: "Elevación de la extremidad"
+    instruction: "Si la herida está en una extremidad y no hay fractura, eleve la extremidad por encima del nivel del corazón mientras mantiene la presión directa."
+    voice_cue: "Eleve la extremidad por encima del corazón, mantenga la presión"
+    duration_seconds: 60
+    critical: false
+    
+    ui:
+      timer: true
+      timer_duration: 60
+      next_button: true
+      illustration: "elevacion_extremidad"
+    
+    contraindications:
+      - "Fractura visible o sospechada"
+      - "Objeto empalado en la extremidad"
+      - "Herida en torso, cabeza o cuello"
+      - "Dolor severo al mover"
+    
+    technique_details:
+      - "Elevación suave y gradual"
+      - "Mantener presión directa siempre"
+      - "Usar almohadas o ropa para sostener"
+      - "Monitorear circulación distal"
+    
+    next_step_logic:
+      if_bleeding_controlled: 5
+      if_bleeding_continues: 6
+
+  - id: 5
+    action: "Vendaje de presión"
+    instruction: "Una vez controlado el sangrado, aplique un vendaje de presión. Envuelva firmemente pero sin cortar la circulación. Verifique pulso distal."
+    voice_cue: "Vendaje de presión firme pero sin cortar circulación"
+    duration_seconds: 120
+    critical: false
+    
+    ui:
+      timer: true
+      timer_duration: 120
+      next_button: true
+      illustration: "vendaje_presion"
+    
+    technique_details:
+      - "Vendaje firme pero no excesivo"
+      - "Cubrir completamente la gasa"
+      - "Verificar pulso distal cada 15 minutos"
+      - "Aflojar si hay signos de isquemia"
+    
+    circulation_check:
+      - "Pulso distal presente"
+      - "Color normal de dedos/uñas"
+      - "Temperatura normal distal"
+      - "Sensibilidad conservada"
+    
+    warning_signs:
+      - "Dedos azules o blancos"
+      - "Frialdad distal"
+      - "Hormigueo o entumecimiento"
+      - "Ausencia de pulso distal"
+    
+    next_step_logic:
+      if_continue: 7
+
+  - id: 6
+    action: "Puntos de presión arterial"
+    instruction: "Si el sangrado continúa, aplique presión en puntos arteriales proximales mientras mantiene presión directa. Use solo si conoce la técnica."
+    voice_cue: "Presión en puntos arteriales proximales, mantenga presión directa"
+    duration_seconds: 180
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 180
+      next_button: true
+      illustration: "puntos_presion_arterial"
+    
+    pressure_points:
+      brazo:
+        location: "Arteria braquial, cara interna del brazo"
+        technique: "Presión con dedos contra el húmero"
+      
+      pierna:
+        location: "Arteria femoral, ingle"
+        technique: "Presión con talón de la mano"
+      
+      cuello:
+        location: "Arteria carótida (CUIDADO)"
+        technique: "Solo personal entrenado"
+    
+    warnings:
+      - "NO usar en heridas de cuello sin entrenamiento"
+      - "NO mantener más de 10 minutos"
+      - "Puede causar isquemia distal"
+      - "Solo si otras medidas fallan"
+    
+    next_step_logic:
+      if_bleeding_controlled: 5
+      if_bleeding_continues: "emergency_measures"
+
+  - id: 7
+    action: "Monitoreo y preparación para traslado"
+    instruction: "Monitoree constantemente al paciente. Busque signos de shock. Mantenga al paciente abrigado y calmado. Prepare para traslado médico."
+    voice_cue: "Monitoree signos vitales, mantenga abrigado, prepare traslado"
+    duration_seconds: null
+    critical: false
+    
+    ui:
+      timer: false
+      next_button: false
+      monitoring_checklist: true
+      illustration: "monitoreo_paciente"
+    
+    monitoring_parameters:
+      consciousness:
+        - "Nivel de conciencia"
+        - "Respuesta a estímulos"
+        - "Orientación temporal/espacial"
+      
+      circulation:
+        - "Pulso (frecuencia y calidad)"
+        - "Presión arterial si es posible"
+        - "Color de piel y mucosas"
+        - "Tiempo de llenado capilar"
+      
+      breathing:
+        - "Frecuencia respiratoria"
+        - "Calidad de la respiración"
+        - "Saturación de oxígeno si disponible"
+    
+    shock_signs:
+      early:
+        - "Pulso rápido (>100 lpm)"
+        - "Piel pálida y fría"
+        - "Sudoración"
+        - "Ansiedad"
+      
+      late:
+        - "Hipotensión"
+        - "Alteración de conciencia"
+        - "Oliguria"
+        - "Cianosis"
+    
+    comfort_measures:
+      - "Posición cómoda (generalmente supino)"
+      - "Abrigo para prevenir hipotermia"
+      - "Tranquilizar al paciente"
+      - "NO dar líquidos por boca"
+
+special_situations:
+  impaled_object:
+    title: "Objeto empalado"
+    protocol:
+      - "NO remover el objeto"
+      - "Estabilizar el objeto en su posición"
+      - "Controlar sangrado alrededor del objeto"
+      - "Vendaje en forma de dona alrededor del objeto"
+      - "Traslado inmediato"
+  
+  internal_bleeding:
+    title: "Hemorragia interna sospechada"
+    signs:
+      - "Dolor abdominal severo"
+      - "Rigidez abdominal"
+      - "Signos de shock sin sangrado visible"
+      - "Vómito con sangre"
+      - "Heces negras o con sangre"
+    protocol:
+      - "Posición supina"
+      - "NO dar líquidos"
+      - "Monitoreo constante"
+      - "Traslado urgente"
+  
+  massive_hemorrhage:
+    title: "Hemorragia masiva"
+    definition: "Pérdida >1500ml o >30% volumen sanguíneo"
+    immediate_actions:
+      - "Llamar 112 inmediatamente"
+      - "Presión directa máxima"
+      - "Elevación si es posible"
+      - "Considerar torniquete si está entrenado"
+      - "Tratamiento de shock"
+
+emergency_measures:
+  tourniquet:
+    title: "Torniquete (solo personal entrenado)"
+    indications:
+      - "Hemorragia masiva de extremidad"
+      - "Múltiples víctimas (triage)"
+      - "Amputación traumática"
+    
+    contraindications:
+      - "Heridas en torso, cuello, cabeza"
+      - "Falta de entrenamiento"
+      - "Sangrado controlable por otros medios"
+    
+    technique:
+      - "Colocar 5-7 cm proximal a la herida"
+      - "Apretar hasta que cese el sangrado"
+      - "Anotar hora de colocación"
+      - "NO aflojar en campo"
+
+complications:
+  hypovolemic_shock:
+    description: "Shock por pérdida de volumen sanguíneo"
+    treatment:
+      - "Posición Trendelenburg modificada"
+      - "Mantener temperatura corporal"
+      - "Oxígeno si disponible"
+      - "Acceso vascular (personal entrenado)"
+  
+  infection:
+    prevention:
+      - "Técnica aséptica"
+      - "Cambio de vendajes"
+      - "Antibióticos profilácticos (médico)"
+  
+  compartment_syndrome:
+    description: "Aumento de presión en compartimento muscular"
+    signs: "Dolor desproporcionado, parestesias"
+    action: "Evaluación médica urgente"
+
+references:
+  - "Advanced Trauma Life Support (ATLS) Guidelines"
+  - "Cruz Roja Española - Manual de Primeros Auxilios"
+  - "SAMUR-PC - Protocolos de Actuación"
+  - "European Trauma Course Guidelines"
+
+legal_notes:
+  - "Documentar hora y medidas aplicadas"
+  - "Consentimiento informado si es posible"
+  - "Ley del Buen Samaritano protege la actuación"
+

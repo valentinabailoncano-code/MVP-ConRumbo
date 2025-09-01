@@ -1,0 +1,277 @@
+id: pa_asfixia_adulto_v1
+version: "1.0"
+title: "Atragantamiento Adulto - Maniobra de Heimlich"
+category: "obstruccion_via_aerea"
+priority: "critico"
+target_audience: "adulto"
+estimated_duration: "2-5 minutos"
+
+metadata:
+  created_by: "ConRumbo Medical Team"
+  reviewed_by: "Dr. Emergency Medicine"
+  last_updated: "2024-08-31"
+  source: "Guías ERC 2021, Cruz Roja Española"
+  language: "es"
+  medical_disclaimer: "Este protocolo no sustituye la atención médica profesional. En caso de emergencia, llame al 112."
+
+triggers:
+  intents:
+    - "atragantamiento"
+    - "asfixia"
+    - "no_puede_respirar"
+    - "heimlich"
+    - "ahogamiento_comida"
+  
+  conditions:
+    edad: ["adulto", "mayor_8_años"]
+    estado_conciencia: ["consciente", "semiconsciente"]
+    obstruccion: ["parcial", "completa"]
+    puede_toser: ["si", "no", "debilmente"]
+
+safety_alerts:
+  - "Si la persona puede toser fuerte, NO interfiera"
+  - "Llame al 112 si la obstrucción no se resuelve rápidamente"
+  - "Esté preparado para RCP si la persona pierde la conciencia"
+  - "NO use dedos para extraer objetos no visibles"
+
+steps:
+  - id: 1
+    action: "Evaluar la capacidad de toser"
+    instruction: "Pregunte: '¿Se está ahogando?' Si la persona puede hablar, toser fuerte o respirar, anímela a toser. NO interfiera si puede toser efectivamente."
+    voice_cue: "¿Se está ahogando? Si puede toser fuerte, anímela a toser"
+    duration_seconds: 10
+    critical: false
+    
+    ui:
+      timer: true
+      timer_duration: 10
+      next_button: true
+      illustration: "evaluacion_tos"
+    
+    decision_tree:
+      can_cough_effectively:
+        description: "Puede toser fuerte, hablar, respirar"
+        action: "Animar a toser, monitorear, NO interferir"
+        next_step: "monitor_only"
+      
+      cannot_cough_effectively:
+        description: "Tos débil, no puede hablar, sonidos agudos"
+        action: "Proceder con maniobras de desobstrucción"
+        next_step: 2
+    
+    signs_effective_cough:
+      - "Puede responder verbalmente"
+      - "Tos fuerte y sonora"
+      - "Puede respirar entre episodios de tos"
+      - "Está consciente y alerta"
+    
+    signs_ineffective_cough:
+      - "No puede hablar o solo susurra"
+      - "Tos silenciosa o muy débil"
+      - "Sonidos agudos al respirar (estridor)"
+      - "Cianosis (coloración azulada)"
+      - "Signo universal de atragantamiento (manos al cuello)"
+
+  - id: 2
+    action: "Posicionarse para golpes en la espalda"
+    instruction: "Colóquese al lado de la persona. Inclínela hacia adelante y sostenga el pecho con una mano. Prepare la otra mano para dar golpes en la espalda."
+    voice_cue: "Inclínela hacia adelante, sostenga el pecho, prepare golpes en la espalda"
+    duration_seconds: 10
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 10
+      next_button: true
+      illustration: "posicion_golpes_espalda"
+    
+    technique_details:
+      - "Persona inclinada hacia adelante (gravedad ayuda)"
+      - "Una mano sostiene el pecho firmemente"
+      - "Otra mano preparada para golpear"
+      - "Manténgase al lado, no detrás"
+    
+    next_step_logic:
+      if_continue: 3
+
+  - id: 3
+    action: "5 golpes interescapulares"
+    instruction: "Con el talón de la mano, dé 5 golpes firmes y secos entre los omóplatos (zona interescapular). Cada golpe debe ser fuerte y dirigido hacia arriba."
+    voice_cue: "5 golpes firmes entre los omóplatos con el talón de la mano"
+    duration_seconds: 15
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 15
+      counter: true
+      counter_target: 5
+      next_button: true
+      illustration: "golpes_interescapulares"
+    
+    technique_details:
+      - "Use el talón de la mano, no los dedos"
+      - "Golpes firmes y secos, no palmadas"
+      - "Dirección: hacia arriba y adelante"
+      - "Zona: entre los omóplatos, línea media"
+      - "Fuerza: suficiente para desalojar el objeto"
+    
+    check_after_each_blow:
+      - "Observe si el objeto sale de la boca"
+      - "Pregunte si puede respirar mejor"
+      - "Retire objeto visible con dedos si es seguro"
+    
+    next_step_logic:
+      if_object_expelled: "recovery_monitoring"
+      if_continue: 4
+
+  - id: 4
+    action: "Posicionarse para compresiones abdominales"
+    instruction: "Colóquese detrás de la persona. Rodee su cintura con los brazos. Coloque un puño cerrado justo por encima del ombligo, por debajo del esternón."
+    voice_cue: "Detrás de la persona, puño cerrado por encima del ombligo"
+    duration_seconds: 10
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 10
+      next_button: true
+      illustration: "posicion_heimlich"
+    
+    technique_details:
+      - "Puño con pulgar hacia adentro"
+      - "Posición: por encima del ombligo, por debajo del esternón"
+      - "Otra mano cubre el puño"
+      - "Persona puede estar de pie o sentada"
+    
+    contraindications:
+      - "NO usar en embarazadas (usar compresiones torácicas)"
+      - "NO usar en niños menores de 1 año"
+      - "Cuidado en personas muy obesas"
+    
+    next_step_logic:
+      if_continue: 5
+
+  - id: 5
+    action: "5 compresiones abdominales (Heimlich)"
+    instruction: "Realice 5 compresiones rápidas y firmes hacia adentro y hacia arriba, como si quisiera levantar a la persona del suelo. Cada compresión debe ser un movimiento separado."
+    voice_cue: "5 compresiones hacia adentro y hacia arriba, como levantar del suelo"
+    duration_seconds: 15
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 15
+      counter: true
+      counter_target: 5
+      next_button: true
+      illustration: "maniobra_heimlich"
+    
+    technique_details:
+      - "Movimiento: hacia adentro y hacia arriba"
+      - "Fuerza: suficiente para comprimir el diafragma"
+      - "Dirección: hacia la caja torácica"
+      - "Cada compresión es un movimiento separado"
+      - "Permita relajación entre compresiones"
+    
+    check_after_each_compression:
+      - "Observe si el objeto sale"
+      - "Pregunte si puede respirar"
+      - "Retire objeto visible si es seguro"
+    
+    next_step_logic:
+      if_object_expelled: "recovery_monitoring"
+      if_continue: 6
+
+  - id: 6
+    action: "Alternar golpes y compresiones"
+    instruction: "Si el objeto no sale, alterne entre 5 golpes en la espalda y 5 compresiones abdominales. Continúe hasta que el objeto salga o la persona pierda la conciencia."
+    voice_cue: "Alterne 5 golpes en espalda y 5 compresiones abdominales"
+    duration_seconds: null
+    critical: true
+    
+    ui:
+      timer: false
+      cycle_counter: true
+      next_button: false
+      illustration: "alternancia_maniobras"
+    
+    continuation_rules:
+      - "Máximo 3 ciclos antes de llamar al 112 si no se ha hecho"
+      - "Revise la boca entre ciclos"
+      - "Mantenga a la persona calmada"
+      - "Esté preparado para RCP si pierde conciencia"
+    
+    stop_conditions:
+      - "El objeto es expulsado"
+      - "La persona puede respirar y toser efectivamente"
+      - "La persona pierde la conciencia"
+      - "Llega ayuda médica"
+    
+    next_step_logic:
+      if_object_expelled: "recovery_monitoring"
+      if_unconscious: "rcp_protocol"
+      if_continue: "repeat_cycle"
+
+special_situations:
+  pregnant_or_obese:
+    title: "Embarazadas o personas obesas"
+    modification: "Usar compresiones torácicas en lugar de abdominales"
+    technique: "Coloque las manos en el centro del pecho, comprima fuerte hacia atrás"
+  
+  self_heimlich:
+    title: "Auto-Heimlich"
+    technique: "Use una silla, mesa o sus propios puños para aplicar presión abdominal"
+    instruction: "Inclínese sobre el respaldo de una silla y presione el abdomen contra el borde"
+  
+  unconscious_victim:
+    title: "Víctima inconsciente"
+    action: "Iniciar inmediatamente protocolo de RCP"
+    note: "Las compresiones torácicas pueden ayudar a expulsar el objeto"
+
+exit_protocols:
+  recovery_monitoring:
+    title: "Monitoreo post-desobstrucción"
+    instruction: "Aunque el objeto haya salido, la persona debe ser evaluada médicamente. Pueden quedar fragmentos o haber lesiones internas."
+    actions:
+      - "Mantener a la persona sentada y calmada"
+      - "Ofrecer agua en pequeños sorbos"
+      - "Monitorear respiración y conciencia"
+      - "Buscar atención médica"
+  
+  rcp_protocol:
+    title: "Transición a RCP"
+    instruction: "Si la persona pierde la conciencia, iniciar inmediatamente RCP. Las compresiones pueden ayudar a expulsar el objeto."
+
+complications:
+  internal_injuries:
+    description: "Las compresiones abdominales pueden causar lesiones internas"
+    prevention: "Usar técnica correcta, fuerza apropiada"
+    action: "Siempre buscar evaluación médica posterior"
+  
+  aspiration:
+    description: "Fragmentos pueden ir a los pulmones"
+    signs: "Tos persistente, dificultad respiratoria posterior"
+    action: "Evaluación médica obligatoria"
+  
+  rib_fractures:
+    description: "Posibles fracturas costales en personas mayores"
+    action: "Continuar maniobras, las fracturas sanan"
+
+prevention_education:
+  - "Masticar bien los alimentos"
+  - "No hablar con la boca llena"
+  - "Evitar alcohol excesivo durante comidas"
+  - "Supervisar niños pequeños durante comidas"
+  - "Cortar alimentos en trozos pequeños para personas mayores"
+
+references:
+  - "European Resuscitation Council Guidelines 2021"
+  - "Cruz Roja Española - Manual de Primeros Auxilios"
+  - "American Red Cross - First Aid Guidelines"
+
+legal_notes:
+  - "Ley del Buen Samaritano protege a quien presta auxilio"
+  - "Obtener consentimiento si la persona está consciente"
+  - "En emergencias, el consentimiento se presume"
+

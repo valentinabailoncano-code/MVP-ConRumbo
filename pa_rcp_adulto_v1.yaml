@@ -1,0 +1,246 @@
+id: pa_rcp_adulto_v1
+version: "1.0"
+title: "RCP Adulto - Reanimación Cardiopulmonar"
+category: "parada_cardiorespiratoria"
+priority: "critico"
+target_audience: "adulto"
+estimated_duration: "hasta_llegada_emergencias"
+
+metadata:
+  created_by: "ConRumbo Medical Team"
+  reviewed_by: "Dr. Emergency Medicine"
+  last_updated: "2024-08-31"
+  source: "Guías ERC 2021, AHA Guidelines"
+  language: "es"
+  medical_disclaimer: "Este protocolo no sustituye la atención médica profesional. En caso de emergencia, llame al 112."
+
+triggers:
+  intents:
+    - "parada_cardiorespiratoria"
+    - "no_respira"
+    - "inconsciente_sin_pulso"
+    - "rcp"
+    - "reanimacion"
+  
+  conditions:
+    edad: ["adulto", "mayor_16_años"]
+    estado_conciencia: ["inconsciente", "no_responde"]
+    respiracion: ["ausente", "agonica", "irregular"]
+    pulso: ["ausente", "no_palpable"]
+
+safety_alerts:
+  - "SIEMPRE llame al 112 antes de iniciar RCP"
+  - "NO interrumpa las compresiones innecesariamente"
+  - "Cambie de reanimador cada 2 minutos para evitar fatiga"
+  - "Use DEA si está disponible"
+
+steps:
+  - id: 1
+    action: "Verificar conciencia y respiración"
+    instruction: "Toque los hombros de la persona firmemente y grite: '¿Está bien? ¿Me oye?'. Observe si respira normalmente durante 10 segundos."
+    voice_cue: "Toque los hombros y grite: ¿Está bien? Observe la respiración 10 segundos"
+    duration_seconds: 10
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 10
+      next_button: true
+      illustration: "persona_inconsciente_verificacion"
+    
+    exit_conditions:
+      - "La persona responde y respira normalmente"
+      - "La persona está consciente"
+    
+    next_step_logic:
+      if_exit: "protocolo_completo"
+      if_continue: 2
+
+  - id: 2
+    action: "Llamar al 112 y solicitar DEA"
+    instruction: "Llame inmediatamente al 112. Diga: 'Necesito una ambulancia, persona inconsciente que no respira'. Si hay otras personas, pida que busquen un DEA."
+    voice_cue: "Llame al 112 inmediatamente. Diga: persona inconsciente que no respira"
+    duration_seconds: 30
+    critical: true
+    
+    ui:
+      timer: false
+      next_button: true
+      emergency_button: true
+      illustration: "llamada_112"
+    
+    safety_notes:
+      - "NO cuelgue hasta que el operador se lo indique"
+      - "Mantenga la línea abierta para recibir instrucciones"
+    
+    next_step_logic:
+      if_continue: 3
+
+  - id: 3
+    action: "Posicionar a la persona"
+    instruction: "Coloque a la persona boca arriba sobre una superficie firme. Incline la cabeza hacia atrás levantando la barbilla para abrir la vía aérea."
+    voice_cue: "Coloque boca arriba en superficie firme. Incline la cabeza hacia atrás"
+    duration_seconds: 15
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 15
+      next_button: true
+      illustration: "posicion_rcp"
+    
+    technique_details:
+      - "Una mano en la frente, otra bajo la barbilla"
+      - "Superficie firme es esencial para compresiones efectivas"
+      - "Retire objetos visibles de la boca si los hay"
+    
+    next_step_logic:
+      if_continue: 4
+
+  - id: 4
+    action: "Posicionar las manos para compresiones"
+    instruction: "Coloque el talón de una mano en el centro del pecho, entre los pezones. Coloque la otra mano encima, entrelazando los dedos. Mantenga los brazos rectos."
+    voice_cue: "Manos en el centro del pecho, entre los pezones. Brazos rectos"
+    duration_seconds: 20
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 20
+      next_button: true
+      illustration: "posicion_manos_rcp"
+    
+    technique_details:
+      - "Solo el talón de la mano toca el pecho"
+      - "Dedos levantados, no tocan las costillas"
+      - "Hombros directamente sobre las manos"
+      - "Brazos completamente extendidos"
+    
+    next_step_logic:
+      if_continue: 5
+
+  - id: 5
+    action: "Iniciar ciclo 30 compresiones"
+    instruction: "Comprima fuerte y rápido al menos 5 cm de profundidad a un ritmo de 100-120 compresiones por minuto. Permita que el pecho se expanda completamente entre compresiones."
+    voice_cue: "30 compresiones fuerte y rápido. 5 centímetros de profundidad"
+    duration_seconds: 18
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 18
+      metronome: true
+      metronome_bpm: 110
+      next_button: false
+      illustration: "compresiones_rcp"
+    
+    technique_details:
+      - "Profundidad: al menos 5 cm, no más de 6 cm"
+      - "Frecuencia: 100-120 compresiones por minuto"
+      - "Descompresión completa entre compresiones"
+      - "Minimizar interrupciones"
+    
+    quality_indicators:
+      - "Sonido de 'clic' en las costillas es normal"
+      - "Sudoración del reanimador indica esfuerzo adecuado"
+      - "Pecho debe volver a posición original"
+    
+    next_step_logic:
+      if_continue: 6
+
+  - id: 6
+    action: "Realizar 2 ventilaciones de rescate"
+    instruction: "Incline la cabeza, levante la barbilla. Selle su boca sobre la boca de la víctima y dé 2 ventilaciones de 1 segundo cada una, observando que el pecho se eleve."
+    voice_cue: "2 ventilaciones de 1 segundo cada una. Observe que el pecho se eleve"
+    duration_seconds: 10
+    critical: true
+    
+    ui:
+      timer: true
+      timer_duration: 10
+      next_button: true
+      illustration: "ventilaciones_rcp"
+    
+    technique_details:
+      - "Selle completamente la boca de la víctima"
+      - "Pinze la nariz con los dedos"
+      - "Ventilación de 1 segundo, observe elevación del pecho"
+      - "Permita exhalación completa entre ventilaciones"
+    
+    alternatives:
+      - "Si no puede hacer boca a boca, continúe solo con compresiones"
+      - "Use mascarilla de bolsillo si está disponible"
+    
+    next_step_logic:
+      if_continue: 7
+
+  - id: 7
+    action: "Continuar ciclos 30:2"
+    instruction: "Repita ciclos de 30 compresiones seguidas de 2 ventilaciones. NO se detenga hasta que llegue ayuda médica, la persona recupere la conciencia, o esté exhausto."
+    voice_cue: "Continúe 30 compresiones, 2 ventilaciones. No se detenga"
+    duration_seconds: null
+    critical: true
+    
+    ui:
+      timer: false
+      cycle_counter: true
+      metronome: true
+      metronome_bpm: 110
+      next_button: false
+      illustration: "ciclos_rcp"
+    
+    continuation_rules:
+      - "Cambie de reanimador cada 2 minutos (5 ciclos)"
+      - "Use DEA cuando esté disponible"
+      - "Siga instrucciones del operador del 112"
+    
+    stop_conditions:
+      - "La persona recupera la conciencia y respira normalmente"
+      - "Llega ayuda médica profesional"
+      - "Está exhausto y no hay reemplazo"
+      - "El entorno se vuelve inseguro"
+    
+    next_step_logic:
+      if_continue: "repeat_cycle"
+      if_dea_available: "dea_protocol"
+      if_recovery: "recovery_position"
+
+exit_protocols:
+  recovery_position:
+    title: "Posición de recuperación"
+    instruction: "Si la persona recupera la conciencia y respira normalmente, colóquela en posición de recuperación y monitoree constantemente hasta que llegue ayuda."
+  
+  dea_protocol:
+    title: "Uso de DEA"
+    instruction: "Siga las instrucciones del DEA. Asegúrese de que nadie toque a la víctima durante el análisis y la descarga."
+
+quality_metrics:
+  compression_depth: "5-6 cm"
+  compression_rate: "100-120 por minuto"
+  compression_fraction: ">80%"
+  ventilation_volume: "500-600 ml"
+  interruption_time: "<10 segundos"
+
+complications:
+  fractured_ribs:
+    description: "Fracturas costales son comunes y aceptables"
+    action: "Continuar RCP, las fracturas sanan, el cerebro no"
+  
+  vomiting:
+    description: "La víctima puede vomitar"
+    action: "Gire la cabeza hacia un lado, limpie la boca, continúe RCP"
+  
+  fatigue:
+    description: "Fatiga del reanimador"
+    action: "Cambie cada 2 minutos, mantenga calidad de compresiones"
+
+references:
+  - "European Resuscitation Council Guidelines 2021"
+  - "American Heart Association Guidelines 2020"
+  - "Sociedad Española de Medicina de Urgencias y Emergencias"
+
+legal_notes:
+  - "Ley del Buen Samaritano protege a quien presta auxilio"
+  - "No hay obligación legal de actuar, pero sí moral"
+  - "Actúe dentro de sus conocimientos y capacidades"
+

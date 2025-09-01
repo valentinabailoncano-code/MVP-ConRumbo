@@ -1,0 +1,342 @@
+# Schema de validación para protocolos de ConRumbo
+# Versión: 1.0
+# Fecha: 2024-08-31
+
+protocol_schema:
+  type: object
+  required:
+    - id
+    - version
+    - title
+    - category
+    - priority
+    - target_audience
+    - metadata
+    - triggers
+    - safety_alerts
+    - steps
+  
+  properties:
+    id:
+      type: string
+      pattern: "^pa_[a-z0-9_]+_v[0-9]+$"
+      description: "Identificador único del protocolo"
+      examples: ["pa_rcp_adulto_v1", "pa_asfixia_adulto_v1"]
+    
+    version:
+      type: string
+      pattern: "^[0-9]+\\.[0-9]+$"
+      description: "Versión del protocolo"
+      examples: ["1.0", "2.1"]
+    
+    title:
+      type: string
+      minLength: 5
+      maxLength: 100
+      description: "Título descriptivo del protocolo"
+    
+    category:
+      type: string
+      enum:
+        - "parada_cardiorespiratoria"
+        - "obstruccion_via_aerea"
+        - "traumatismo_hemorragico"
+        - "traumatismo_termico"
+        - "traumatismo_craneal"
+        - "intoxicacion"
+        - "shock_anafilactico"
+        - "crisis_convulsiva"
+        - "emergencia_diabetica"
+        - "emergencia_cardiaca"
+      description: "Categoría médica del protocolo"
+    
+    priority:
+      type: string
+      enum: ["critico", "urgente", "menos_urgente", "no_urgente"]
+      description: "Nivel de prioridad del protocolo"
+    
+    target_audience:
+      type: string
+      enum: ["adulto", "pediatrico", "neonatal", "todas_edades"]
+      description: "Población objetivo del protocolo"
+    
+    estimated_duration:
+      type: string
+      description: "Duración estimada del protocolo"
+      examples: ["2-5 minutos", "hasta_llegada_emergencias"]
+    
+    metadata:
+      type: object
+      required:
+        - created_by
+        - last_updated
+        - language
+        - medical_disclaimer
+      properties:
+        created_by:
+          type: string
+          description: "Autor del protocolo"
+        
+        reviewed_by:
+          type: string
+          description: "Revisor médico del protocolo"
+        
+        last_updated:
+          type: string
+          format: date
+          description: "Fecha de última actualización"
+        
+        source:
+          type: string
+          description: "Fuentes médicas de referencia"
+        
+        language:
+          type: string
+          enum: ["es", "en", "fr", "de"]
+          description: "Idioma del protocolo"
+        
+        medical_disclaimer:
+          type: string
+          description: "Descargo de responsabilidad médica"
+    
+    triggers:
+      type: object
+      required: ["intents"]
+      properties:
+        intents:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: "Intenciones que activan el protocolo"
+        
+        conditions:
+          type: object
+          description: "Condiciones específicas para activación"
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    
+    safety_alerts:
+      type: array
+      items:
+        type: string
+      minItems: 1
+      description: "Alertas de seguridad importantes"
+    
+    steps:
+      type: array
+      items:
+        $ref: "#/definitions/step"
+      minItems: 1
+      description: "Pasos del protocolo"
+
+definitions:
+  step:
+    type: object
+    required:
+      - id
+      - action
+      - instruction
+      - voice_cue
+      - critical
+      - ui
+    properties:
+      id:
+        type: integer
+        minimum: 1
+        description: "Identificador numérico del paso"
+      
+      action:
+        type: string
+        minLength: 5
+        maxLength: 100
+        description: "Acción principal del paso"
+      
+      instruction:
+        type: string
+        minLength: 10
+        maxLength: 500
+        description: "Instrucción detallada"
+      
+      voice_cue:
+        type: string
+        minLength: 5
+        maxLength: 200
+        description: "Guía de voz para TTS"
+      
+      duration_seconds:
+        type: [integer, "null"]
+        minimum: 1
+        maximum: 3600
+        description: "Duración recomendada en segundos"
+      
+      critical:
+        type: boolean
+        description: "Indica si es un paso crítico"
+      
+      ui:
+        type: object
+        required: ["timer", "next_button"]
+        properties:
+          timer:
+            type: boolean
+            description: "Mostrar temporizador"
+          
+          timer_duration:
+            type: integer
+            minimum: 1
+            maximum: 3600
+            description: "Duración del temporizador en segundos"
+          
+          next_button:
+            type: boolean
+            description: "Mostrar botón siguiente"
+          
+          auto_advance:
+            type: boolean
+            description: "Avanzar automáticamente"
+          
+          metronome:
+            type: boolean
+            description: "Activar metrónomo"
+          
+          metronome_bpm:
+            type: integer
+            minimum: 60
+            maximum: 180
+            description: "BPM del metrónomo"
+          
+          illustration:
+            type: string
+            description: "Nombre de la ilustración"
+          
+          emergency_button:
+            type: boolean
+            description: "Mostrar botón de emergencia"
+          
+          counter:
+            type: boolean
+            description: "Mostrar contador"
+          
+          counter_target:
+            type: integer
+            minimum: 1
+            description: "Objetivo del contador"
+          
+          cycle_counter:
+            type: boolean
+            description: "Mostrar contador de ciclos"
+          
+          monitoring_checklist:
+            type: boolean
+            description: "Mostrar lista de monitoreo"
+      
+      technique_details:
+        type: array
+        items:
+          type: string
+        description: "Detalles técnicos del procedimiento"
+      
+      exit_conditions:
+        type: array
+        items:
+          type: string
+        description: "Condiciones para salir del paso"
+      
+      next_step_logic:
+        type: object
+        description: "Lógica para el siguiente paso"
+        properties:
+          if_continue:
+            type: [integer, string]
+            description: "Siguiente paso si continúa"
+          
+          if_exit:
+            type: string
+            description: "Acción si sale del protocolo"
+          
+          if_emergency:
+            type: string
+            description: "Acción en caso de emergencia"
+      
+      safety_notes:
+        type: array
+        items:
+          type: string
+        description: "Notas de seguridad específicas"
+      
+      alternatives:
+        type: array
+        items:
+          type: string
+        description: "Alternativas al procedimiento"
+      
+      quality_indicators:
+        type: array
+        items:
+          type: string
+        description: "Indicadores de calidad"
+      
+      continuation_rules:
+        type: array
+        items:
+          type: string
+        description: "Reglas para continuar"
+      
+      stop_conditions:
+        type: array
+        items:
+          type: string
+        description: "Condiciones para detener"
+
+# Validaciones adicionales
+validation_rules:
+  step_sequence:
+    description: "Los IDs de pasos deben ser secuenciales"
+    rule: "step.id debe ser consecutivo empezando en 1"
+  
+  timer_consistency:
+    description: "Si ui.timer es true, debe existir timer_duration"
+    rule: "ui.timer == true requiere ui.timer_duration"
+  
+  metronome_consistency:
+    description: "Si ui.metronome es true, debe existir metronome_bpm"
+    rule: "ui.metronome == true requiere ui.metronome_bpm"
+  
+  counter_consistency:
+    description: "Si ui.counter es true, debe existir counter_target"
+    rule: "ui.counter == true requiere ui.counter_target"
+  
+  critical_step_requirements:
+    description: "Pasos críticos deben tener safety_alerts o safety_notes"
+    rule: "critical == true requiere safety_alerts o safety_notes"
+
+# Metadatos del esquema
+schema_metadata:
+  version: "1.0"
+  created_by: "ConRumbo Development Team"
+  last_updated: "2024-08-31"
+  description: "Esquema de validación para protocolos médicos de ConRumbo"
+  
+  supported_languages: ["es", "en"]
+  supported_categories:
+    - "parada_cardiorespiratoria"
+    - "obstruccion_via_aerea"
+    - "traumatismo_hemorragico"
+    - "traumatismo_termico"
+  
+  ui_components:
+    - "timer"
+    - "metronome"
+    - "counter"
+    - "emergency_button"
+    - "monitoring_checklist"
+    - "illustration"
+  
+  quality_assurance:
+    medical_review: "Obligatorio para todos los protocolos"
+    testing: "Pruebas de usabilidad requeridas"
+    validation: "Validación automática contra esquema"
+
