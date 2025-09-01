@@ -3,11 +3,13 @@ uvicorn==0.30.6
 starlette==0.38.5
 pydantic==2.9.2
 PyYAML==6.0.2
+numpy>=1.26
+openai>=1.30.0
+
 
 
 # RAG / embeddings (opcional)
+# Opcionales:
+faiss-cpu>=1.8.0        # activarlo solo si te instala bien
 sentence-transformers>=2.7.0
-faiss-cpu>=1.8.0
-numpy>=1.26
 scikit-learn>=1.4
-openai>=1.30.0
