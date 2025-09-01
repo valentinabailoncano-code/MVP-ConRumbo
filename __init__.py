@@ -1,2 +1,0 @@
-# RAG module for ConRumbo
-

@@ -1,4 +1,4 @@
-import { useVoiceStore } from './stores';
+import { useVoiceStore } from '../store/stores';
 
 class SpeechManager {
   constructor() {

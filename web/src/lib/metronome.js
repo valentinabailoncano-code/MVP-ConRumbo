@@ -1,4 +1,4 @@
-import { useMetronomeStore } from './stores';
+import { useMetronomeStore } from '../store/stores.js';
 
 class MetronomeManager {
   constructor() {
