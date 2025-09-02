@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Node/Vite
+node_modules/
+dist/
+
+# Entornos
+.env
+.env.*.local
+
+# SO
+.DS_Store
+Thumbs.db
