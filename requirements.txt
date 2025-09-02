@@ -6,8 +6,6 @@ PyYAML==6.0.2
 numpy>=1.26
 openai>=1.30.0
 
-
-
 # RAG / embeddings (opcional)
 # Opcionales:
 faiss-cpu>=1.8.0        # activarlo solo si te instala bien
